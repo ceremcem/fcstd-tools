@@ -1,0 +1,21 @@
+#!/bin/bash
+set -eu
+set_dir(){ _dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; }; set_dir
+safe_source () { source $1; set_dir; }
+# end of bash boilerplate
+
+# Description
+#
+# Unpacks FreeCAD's .fcstd file in current directory
+for file in "$@"; do
+    out="${file}.d"
+    echo -n "Extracting ${file#$_dir/}"
+    set +e
+    rm $out 2> /dev/null
+    set -e
+    unzip -o $file -d $out \
+       | grep 'inflating' \
+       | awk '{print $2}' \
+       | while read -r f; do basename $f; done > ${out}.pack-order
+    [[ $? -eq 0 ]] && echo " [OK]" || echo " [FAIL]"
+done

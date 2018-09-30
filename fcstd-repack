@@ -1,0 +1,36 @@
+#!/bin/bash
+set -eu -o pipefail
+set_dir(){ _dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; }; set_dir
+safe_source () { source $1; set_dir; }
+# end of bash boilerplate
+
+# Description
+#
+# Repacks previously unpacked FreeCAD fcstd files
+
+doc=$1
+
+for doc in "$@"; do
+    [[ -d $doc ]] || { echo "Not a directory: $doc"; continue; }
+    dname=${doc#$_dir/}
+    fname=${dname%.d}
+    files_in_order=$(cat ${doc}.pack-order | tr -s '\n' ' ')
+    echo -n "Packing ${doc#$_dir/}"
+    cd $doc
+    zip -q -3 -r ../${fname}.new $files_in_order
+    if [[ $? -eq 0 ]]; then
+        cd ..
+        backup="/tmp/$fname.prev"
+        if [[ -f $fname ]]; then
+            mv $fname $backup
+            info="(backup: $backup)"
+        fi
+        mv $fname.new $fname
+        echo " [OK] $info"
+        rm -rf $doc
+        rm ${doc}.pack-order
+    else
+        echo " [FAIL]"
+        cd ..
+    fi
+done
